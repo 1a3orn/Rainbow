@@ -142,7 +142,7 @@ def read_args():
         if args.frame_stack is None: args.frame_stack = 4
         if args.resolution is None: args.resolution = args.resolution = (64, 64)
         if args.grayscale is None: args.grayscale = False
-        args.time_limit = None
+        # args.time_limit = None -- Dropping time limit for procgen envs
 
     # hyperparameters for DER are adapted from https://github.com/Kaixhin/Rainbow
     if args.der:
