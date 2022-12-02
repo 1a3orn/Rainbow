@@ -22,7 +22,7 @@ def read_args():
                                      formatter_class=argparse.RawTextHelpFormatter)
 
     # training settings
-    parser.add_argument('--training_frames', type=int, default=10_000_000, help='train for n environment interactions ("game_frames" in the code)')
+    parser.add_argument('--training_frames', type=int, default=5_000_000, help='train for n environment interactions ("game_frames" in the code)')
     parser.add_argument('--record_every', type=int, default=60*50, help='wait at least x seconds between episode recordings (default is to use environment specific presets)')
     parser.add_argument('--seed', type=int, default=0, help='seed for pytorch, numpy, environments, random')
     parser.add_argument('--use_wandb', type=parse_bool, default=True, help='whether use "weights & biases" for tracking metrics, video recordings and model checkpoints')
@@ -42,7 +42,7 @@ def read_args():
                              '" will reduce the number of timesteps required to solve each game and is useful for testing or when working with l'
                              'imited compute resources.')
     parser.add_argument('--retro_state', type=str, default='default', help='initial gym-retro state name or "default" or "randomized" (to randomize on episode reset)')
-    parser.add_argument('--time_limit', type=int, default=108_000, help='environment time limit for gym & retro (in non-frameskipped native env frames)')
+    parser.add_argument('--time_limit', type=int, default=600, help='environment time limit for gym & retro (in non-frameskipped native env frames)')
     parser.add_argument('--eid', type=int, default=None, help='')
     parser.add_argument('--wandb_tag', type=str, default=None, help='')
 
@@ -54,7 +54,7 @@ def read_args():
 
     # dqn settings
     parser.add_argument('--buffer_size', type=int, default=int(2 ** 20), help='capacity of experience replay buffer (must be a power of two)')
-    parser.add_argument('--burnin', type=int, default=100_000, help='how many transitions should be in the buffer before start of training')
+    parser.add_argument('--burnin', type=int, default=50_000, help='how many transitions should be in the buffer before start of training')
     parser.add_argument('--gamma', type=float, default=0.99, help='reward discount factor')
     parser.add_argument('--sync_dqn_target_every', type=int, default=32_000, help='sync Q target net every n frames')
 
@@ -142,7 +142,7 @@ def read_args():
         if args.frame_stack is None: args.frame_stack = 4
         if args.resolution is None: args.resolution = args.resolution = (64, 64)
         if args.grayscale is None: args.grayscale = False
-        # args.time_limit = None -- Dropping time limit for procgen envs
+        # args.time_limit = None # CHANGE: Allowing time limit for procgen envs
 
     # hyperparameters for DER are adapted from https://github.com/Kaixhin/Rainbow
     if args.der:
