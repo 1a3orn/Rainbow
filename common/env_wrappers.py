@@ -565,7 +565,7 @@ def create_retro_env(config, instance_seed, instance, decorr_steps):
     if config.frame_skip > 1:
         env = StochasticFrameSkip(env, seed=instance_seed, n=config.frame_skip, stickprob=config.retro_stickyprob)
     env = RecordEpisodeStatistics(env, config.gamma)
-    env = RetroEpisodicLifeEnv(env)
+    env = RetroEpisodicLifeEnv(env)h
     env = ClipRewardEnv(env)
     env = WarpFrame(env, width=config.resolution[1], height=config.resolution[0], grayscale=config.grayscale)
 
@@ -599,7 +599,7 @@ def create_procgen_env(config, instance_seed, instance):
     env = WarpFrame(env, width=config.resolution[1], height=config.resolution[0], grayscale=config.grayscale)
 
     # MY CHANGES -- Save everything as a tensor
-    env = RecorderWrapperTensor(env, fps=BASE_FPS_PROCGEN // config.frame_skip, save_dir=config.save_dir, label='raw', record_every=config.record_every)
+    env = RecorderWrapperTensor(env, save_dir=config.save_dir + '_tensor')
 
     if instance == 0:
         env = RecorderWrapper(env, fps=BASE_FPS_PROCGEN // config.frame_skip, save_dir=config.save_dir, label='preproc', record_every=config.record_every)
