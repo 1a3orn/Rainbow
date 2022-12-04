@@ -565,14 +565,12 @@ def create_retro_env(config, instance_seed, instance, decorr_steps):
     if config.frame_skip > 1:
         env = StochasticFrameSkip(env, seed=instance_seed, n=config.frame_skip, stickprob=config.retro_stickyprob)
     env = RecordEpisodeStatistics(env, config.gamma)
-    env = RetroEpisodicLifeEnv(env)h
+    env = RetroEpisodicLifeEnv(env)
     env = ClipRewardEnv(env)
     env = WarpFrame(env, width=config.resolution[1], height=config.resolution[0], grayscale=config.grayscale)
 
     if instance == 0:
         env = RecorderWrapper(env, fps=BASE_FPS_ATARI // config.frame_skip, save_dir=config.save_dir, label='preproc', record_every=config.record_every)
-
-    env = RecorderWrapperTensor(env, save_dir=config.save_dir + '_tensor')
 
     if decorr_steps is not None:
         env = DecorrEnvWrapper(env, decorr_steps)
