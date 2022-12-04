@@ -42,7 +42,7 @@ def read_args():
                              '" will reduce the number of timesteps required to solve each game and is useful for testing or when working with l'
                              'imited compute resources.')
     parser.add_argument('--retro_state', type=str, default='default', help='initial gym-retro state name or "default" or "randomized" (to randomize on episode reset)')
-    parser.add_argument('--time_limit', type=int, default=600, help='environment time limit for gym & retro (in non-frameskipped native env frames)')
+    parser.add_argument('--time_limit', type=int, default=1000, help='environment time limit for gym & retro (in non-frameskipped native env frames)')
     parser.add_argument('--eid', type=int, default=None, help='')
     parser.add_argument('--wandb_tag', type=str, default=None, help='')
 

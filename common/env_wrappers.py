@@ -4,6 +4,9 @@ Some of these wrappers are based on https://github.com/openai/baselines/blob/ea2
 """
 
 import time
+import os
+import string
+import random
 from functools import partial
 
 import cv2, imageio
@@ -419,6 +422,55 @@ class WarpFrame(gym.ObservationWrapper):
             obs = obs.copy()
             obs[self._key] = frame
         return obs
+    
+
+class RecorderWrapperTensor(gym.Wrapper):
+    """ Env wrapper that records the game as pickled tensors """
+
+    def __init__(self, env, save_dir):
+        super().__init__(env)
+        self.save_dir = save_dir
+        # creates save directory if it does not exist
+        if not os.path.exists(self.save_dir):
+            os.makedirs(self.save_dir)
+
+        # If it does not exist, create new file in the directory
+        # which is used to store how many recordings have been made
+        if not os.path.exists(self.save_dir + '/recordings.txt'):
+            with open(self.save_dir + '/recordings.txt', 'w') as f:
+                f.write('0')
+
+        self.state = []
+
+    def step(self, action):
+        observation, rew, done, info = self.env.step(action)
+
+        # Records state relevant information
+        self.state.append({
+            'observation': observation,
+            'reward': rew,
+            'done': done,
+            'action': action
+        })
+
+        # If the episode is done, save the state
+        # in the correct folder, with a left padded number
+        # which is the number of recordings made so far
+        if done:
+            with open(self.save_dir + '/recordings.txt', 'r') as f:
+                recordings = int(f.read())
+            with open(self.save_dir + '/recordings.txt', 'w') as f:
+                f.write(str(recordings + 1))
+
+            # Make a random string of 10 characters
+            # to make sure that the file name is unique
+            random_string = ''.join(random.choices(string.ascii_uppercase + string.digits, k=10))
+
+            file_name = self.save_dir + '/' + str(recordings).zfill(5) + '_' + random_string + '.pkl'
+            with open(file_name, 'wb') as f:
+                pickle.dump(self.state, f)
+                    
+            self.state = []
 
 
 class RandomizeStateOnReset(gym.Wrapper):
@@ -520,6 +572,8 @@ def create_retro_env(config, instance_seed, instance, decorr_steps):
     if instance == 0:
         env = RecorderWrapper(env, fps=BASE_FPS_ATARI // config.frame_skip, save_dir=config.save_dir, label='preproc', record_every=config.record_every)
 
+    env = RecorderWrapperTensor(env, save_dir=config.save_dir + '_tensor')
+
     if decorr_steps is not None:
         env = DecorrEnvWrapper(env, decorr_steps)
     return env
@@ -544,6 +598,9 @@ def create_procgen_env(config, instance_seed, instance):
 
     env = WarpFrame(env, width=config.resolution[1], height=config.resolution[0], grayscale=config.grayscale)
 
+    # MY CHANGES -- Save everything as a tensor
+    env = RecorderWrapperTensor(env, fps=BASE_FPS_PROCGEN // config.frame_skip, save_dir=config.save_dir, label='raw', record_every=config.record_every)
+
     if instance == 0:
         env = RecorderWrapper(env, fps=BASE_FPS_PROCGEN // config.frame_skip, save_dir=config.save_dir, label='preproc', record_every=config.record_every)
     return env
@@ -552,9 +609,12 @@ def create_env_instance(args, instance, decorr_steps):
     instance_seed = args.seed+instance
     decorr_steps = None if decorr_steps is None else decorr_steps*instance
 
-    if args.env_name.startswith('retro:'): env = create_retro_env(args, instance_seed, instance, decorr_steps)
-    elif args.env_name.startswith('gym:'): env = create_atari_env(args, instance_seed, instance, decorr_steps)
-    elif args.env_name.startswith('procgen:'): env = create_procgen_env(args, instance_seed, instance)
+    if args.env_name.startswith('retro:'):
+        env = create_retro_env(args, instance_seed, instance, decorr_steps)
+    elif args.env_name.startswith('gym:'):
+        env = create_atari_env(args, instance_seed, instance, decorr_steps)
+    elif args.env_name.startswith('procgen:'):
+        env = create_procgen_env(args, instance_seed, instance)
     else: raise RuntimeError('Environment id needs to start with "gym:", "retro:" or "procgen:".')
     if not args.env_name.startswith('procgen:'):
         env.seed(instance_seed)
@@ -563,7 +623,10 @@ def create_env_instance(args, instance, decorr_steps):
     return env
 
 def create_env(args, decorr_steps=None):
-    env_fns = [partial(create_env_instance, args=args, instance=i, decorr_steps=decorr_steps) for i in range(args.parallel_envs)]
+    env_fns = [
+            partial(create_env_instance, args=args, instance=i, decorr_steps=decorr_steps)
+            for i in range(args.parallel_envs)
+    ]
     vec_env = partial(SubprocVecEnvNoFlatten) if args.subproc_vecenv else DummyVecEnvNoFlatten
     env = vec_env(env_fns)
     env = LazyVecFrameStack(env, args.frame_stack, args.parallel_envs, clone_arrays=not args.subproc_vecenv, lz4_compress=False)
