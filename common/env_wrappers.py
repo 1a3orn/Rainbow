@@ -447,6 +447,7 @@ class RecorderWrapperTensor(gym.Wrapper):
         observation, rew, done, info = self.env.step(action)
 
         # Records state relevant information
+        print(observation.shape)
         self.state.append({
             'observation': observation,
             'reward': rew,
@@ -458,20 +459,22 @@ class RecorderWrapperTensor(gym.Wrapper):
         # in the correct folder, with a left padded number
         # which is the number of recordings made so far
         if done:
-            with open(self.save_dir + '/recordings.txt', 'r') as f:
-                recordings = f.read()
-            if recordings != '':
-                recordings = int(recordings)
-                with open(self.save_dir + '/recordings.txt', 'w') as f:
-                    f.write(str(recordings + 1))
+            # Only do this 1/6th of the time
+            if random.random() < 0.16666666666666666:
+                with open(self.save_dir + '/recordings.txt', 'r') as f:
+                    recordings = f.read()
+                if recordings != '':
+                    recordings = int(recordings)
+                    with open(self.save_dir + '/recordings.txt', 'w') as f:
+                        f.write(str(recordings + 1))
 
-            # Make a random string of 10 characters
-            # to make sure that the file name is unique
-            random_string = ''.join(random.choices(string.ascii_uppercase + string.digits, k=4))
+                # Make a random string of 10 characters
+                # to make sure that the file name is unique
+                random_string = ''.join(random.choices(string.ascii_uppercase + string.digits, k=4))
 
-            file_name = self.save_dir + '/' + str(recordings).zfill(5) + '_' + random_string + '.pkl'
-            with open(file_name, 'wb') as f:
-                pickle.dump(self.state, f)
+                file_name = self.save_dir + '/' + str(recordings).zfill(5) + '_' + random_string + '.pkl'
+                with open(file_name, 'wb') as f:
+                    pickle.dump(self.state, f)
                     
             self.state = []
 
