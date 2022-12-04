@@ -4,6 +4,7 @@ Some of these wrappers are based on https://github.com/openai/baselines/blob/ea2
 """
 
 import time
+import pickle
 import os
 import string
 import random
@@ -472,6 +473,7 @@ class RecorderWrapperTensor(gym.Wrapper):
                     
             self.state = []
 
+        return observation, rew, done, info
 
 class RandomizeStateOnReset(gym.Wrapper):
     """
