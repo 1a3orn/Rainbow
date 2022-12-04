@@ -459,13 +459,15 @@ class RecorderWrapperTensor(gym.Wrapper):
         # which is the number of recordings made so far
         if done:
             with open(self.save_dir + '/recordings.txt', 'r') as f:
-                recordings = int(f.read())
-            with open(self.save_dir + '/recordings.txt', 'w') as f:
-                f.write(str(recordings + 1))
+                recordings = f.read()
+            if recordings != '':
+                recordings = int(recordings)
+                with open(self.save_dir + '/recordings.txt', 'w') as f:
+                    f.write(str(recordings + 1))
 
             # Make a random string of 10 characters
             # to make sure that the file name is unique
-            random_string = ''.join(random.choices(string.ascii_uppercase + string.digits, k=10))
+            random_string = ''.join(random.choices(string.ascii_uppercase + string.digits, k=4))
 
             file_name = self.save_dir + '/' + str(recordings).zfill(5) + '_' + random_string + '.pkl'
             with open(file_name, 'wb') as f:
