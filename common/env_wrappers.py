@@ -468,11 +468,11 @@ class RecorderWrapperTensorS3(gym.Wrapper):
         if done:
             # Only do this 1/6th of the time
             
-            with open(self.save_dir + '/recordings.txt', 'r') as f:
+            with open(self.rec_dir + '/recordings.txt', 'r') as f:
                 recordings = f.read()
             if recordings != '':
                 recordings = int(recordings)
-                with open(self.save_dir + '/recordings.txt', 'w') as f:
+                with open(self.rec_dir + '/recordings.txt', 'w') as f:
                     f.write(str(recordings + 1))
 
             # Make a random string of 10 characters
