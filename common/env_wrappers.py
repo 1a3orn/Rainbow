@@ -6,6 +6,7 @@ Some of these wrappers are based on https://github.com/openai/baselines/blob/ea2
 import time
 import pickle
 import os
+import boto3
 import string
 import random
 from functools import partial
@@ -425,13 +426,84 @@ class WarpFrame(gym.ObservationWrapper):
         return obs
     
 
-class RecorderWrapperTensor(gym.Wrapper):
+class RecorderWrapperTensorS3(gym.Wrapper):
+    """ Env wrapper that records the game as pickled tensors """
+
+    def __init__(self, env):
+        super().__init__(env)
+        # Create AWS S3 client
+        self.s3 = boto3.client(
+                's3',
+                aws_access_key_id=os.environ["AWS_ACCESS_KEY_ID"],
+                aws_secret_access_key=os.environ["AWS_SECRET_ACCESS_KEY"])
+        
+        self.s3_bucket = os.environ["AWS_S3_BUCKET"]
+        self.rec_dir = os.environ["AWS_RECORDING_DIR"]
+
+        if not os.path.exists(self.rec_dir):
+            os.makedirs(self.rec_dir)
+
+        # If it does not exist, create new file in the directory
+        # which is used to store how many recordings have been made
+        if not os.path.exists(self.rec_dir + '/recordings.txt'):
+            with open(self.rec_dir + '/recordings.txt', 'w') as f:
+                f.write('0')
+
+        self.state = []
+
+    def step(self, action):
+        observation, rew, done, info = self.env.step(action)
+
+        # Records state relevant information
+        self.state.append({
+            'observation': observation,
+            'reward': rew,
+            'done': done,
+            'action': action
+        })
+
+        # If the episode is done, save the state
+        # in the correct folder, with a left padded number
+        # which is the number of recordings made so far
+        if done:
+            # Only do this 1/6th of the time
+            
+            with open(self.save_dir + '/recordings.txt', 'r') as f:
+                recordings = f.read()
+            if recordings != '':
+                recordings = int(recordings)
+                with open(self.save_dir + '/recordings.txt', 'w') as f:
+                    f.write(str(recordings + 1))
+
+            # Make a random string of 10 characters
+            # to make sure that the file name is unique
+            random_string = ''.join(random.choices(string.ascii_uppercase + string.digits, k=3))
+            file_name = self.rec_dir + '/' + str(recordings).zfill(5) + '_' + random_string + '.pkl'
+            
+            self.s3.upload_file(
+                Filename=file_name,
+                Bucket=self.s3_bucket,
+                Key=file_name)
+                    
+            self.state = []
+
+        return observation, rew, done, info
+    
+
+class RecorderWrapperTensorOld(gym.Wrapper):
     """ Env wrapper that records the game as pickled tensors """
 
     def __init__(self, env, save_dir):
         super().__init__(env)
         self.save_dir = save_dir
-        # creates save directory if it does not exist
+        # Create AWS S3 client
+        self.s3 = boto3.client(
+                's3',
+                aws_access_key_id=os.environ["AWS_ACCESS_KEY_ID"],
+                aws_secret_access_key=os.environ["AWS_SECRET_ACCESS_KEY"])
+        
+        self.s3_bucket = os.environ["AWS_S3_BUCKET"]
+
         if not os.path.exists(self.save_dir):
             os.makedirs(self.save_dir)
 
@@ -447,7 +519,6 @@ class RecorderWrapperTensor(gym.Wrapper):
         observation, rew, done, info = self.env.step(action)
 
         # Records state relevant information
-        print(observation.shape)
         self.state.append({
             'observation': observation,
             'reward': rew,
@@ -460,7 +531,7 @@ class RecorderWrapperTensor(gym.Wrapper):
         # which is the number of recordings made so far
         if done:
             # Only do this 1/6th of the time
-            if random.random() < 0.16666666666666666:
+            if random.random() < 0.15:
                 with open(self.save_dir + '/recordings.txt', 'r') as f:
                     recordings = f.read()
                 if recordings != '':
@@ -470,7 +541,7 @@ class RecorderWrapperTensor(gym.Wrapper):
 
                 # Make a random string of 10 characters
                 # to make sure that the file name is unique
-                random_string = ''.join(random.choices(string.ascii_uppercase + string.digits, k=4))
+                random_string = ''.join(random.choices(string.ascii_uppercase + string.digits, k=3))
 
                 file_name = self.save_dir + '/' + str(recordings).zfill(5) + '_' + random_string + '.pkl'
                 with open(file_name, 'wb') as f:
@@ -487,7 +558,7 @@ class RandomizeStateOnReset(gym.Wrapper):
     def __init__(self, env, seed):
         super().__init__(env)
         self.init_states = retro_utils.get_init_states()[self.env.gamename]
-        print(self.init_states)
+        
         self.rng = np.random.RandomState(seed)
         if self.init_states:
             self.unwrapped.load_state(self.init_states[self.rng.randint(0, len(self.init_states))])
@@ -604,7 +675,8 @@ def create_procgen_env(config, instance_seed, instance):
     env = WarpFrame(env, width=config.resolution[1], height=config.resolution[0], grayscale=config.grayscale)
 
     # MY CHANGES -- Save everything as a tensor
-    env = RecorderWrapperTensor(env, save_dir=config.save_dir + '_tensor')
+    if os.environ["USE_TENSOR_S3"] == "True":
+        env = RecorderWrapperTensorS3(env)
 
     if instance == 0:
         env = RecorderWrapper(env, fps=BASE_FPS_PROCGEN // config.frame_skip, save_dir=config.save_dir, label='preproc', record_every=config.record_every)
