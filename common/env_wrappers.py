@@ -481,10 +481,11 @@ class RecorderWrapperTensorS3(gym.Wrapper):
             file_name = self.rec_dir + '/' + str(recordings).zfill(5) + '_' + random_string + '.pkl'
             with open(file_name, 'wb') as f:
                 pickle.dump(self.state, f)
+            time.sleep(0.1)
             self.s3.upload_file(
-                Filename=file_name,
-                Bucket=self.s3_bucket,
-                Key=file_name)
+                file_name,
+                self.s3_bucket,
+                self.rec_dir + "/" + str(recordings).zfill(6) + ".pkl")
             os.remove(file_name)
                     
             self.state = []
