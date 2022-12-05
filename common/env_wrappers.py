@@ -479,11 +479,13 @@ class RecorderWrapperTensorS3(gym.Wrapper):
             # to make sure that the file name is unique
             random_string = ''.join(random.choices(string.ascii_uppercase + string.digits, k=3))
             file_name = self.rec_dir + '/' + str(recordings).zfill(5) + '_' + random_string + '.pkl'
-            
+            with open(file_name, 'wb') as f:
+                pickle.dump(self.state, f)
             self.s3.upload_file(
                 Filename=file_name,
                 Bucket=self.s3_bucket,
                 Key=file_name)
+            os.remove(file_name)
                     
             self.state = []
 
