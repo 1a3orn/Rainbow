@@ -1,8 +1,9 @@
 """
 Here all environment wrappers are defined and environments are created and configured.
-Some of these wrappers are based on https://github.com/openai/baselines/blob/ea25b9e8b234e6ee1bca43083f8f3cf974143998/baselines/common/atari_wrappers.py
+left
 """
 
+import torch
 import time
 import pickle
 import os
@@ -425,7 +426,6 @@ class WarpFrame(gym.ObservationWrapper):
             obs[self._key] = frame
         return obs
     
-
 class RecorderWrapperTensorS3(gym.Wrapper):
     """ Env wrapper that records the game as pickled tensors """
 
@@ -439,17 +439,23 @@ class RecorderWrapperTensorS3(gym.Wrapper):
         
         self.s3_bucket = os.environ["AWS_S3_BUCKET"]
         self.rec_dir = os.environ["AWS_RECORDING_DIR"]
+        self.aws_save_every = int(os.environ["AWS_SAVE_EVERY"])
 
+        self.inc_file = self.rec_dir + '/recordings.txt'
+        self.create_recorder_file()
+        self.state = []
+        self.states = []
+
+    def create_recorder_file(self):
+        # If the directory does not exist, create it
         if not os.path.exists(self.rec_dir):
             os.makedirs(self.rec_dir)
 
-        # If it does not exist, create new file in the directory
-        # which is used to store how many recordings have been made
-        if not os.path.exists(self.rec_dir + '/recordings.txt'):
-            with open(self.rec_dir + '/recordings.txt', 'w') as f:
+        # If the increment file does not exist, create it
+        if not os.path.exists(self.inc_file):
+            with open(self.inc_file, 'w') as f:
                 f.write('0')
-
-        self.state = []
+        time.sleep(0.2)
 
     def step(self, action):
         observation, rew, done, info = self.env.step(action)
@@ -462,35 +468,36 @@ class RecorderWrapperTensorS3(gym.Wrapper):
             'action': action
         })
 
-        # If the episode is done, save the state
-        # in the correct folder, with a left padded number
-        # which is the number of recordings made so far
+        # If the episode is done
         if done:
-            # Only do this 1/6th of the time
-            
-            with open(self.rec_dir + '/recordings.txt', 'r') as f:
-                recordings = f.read()
-            if recordings != '':
-                recordings = int(recordings)
-                with open(self.rec_dir + '/recordings.txt', 'w') as f:
-                    f.write(str(recordings + 1))
-
-            # Make a random string of 10 characters
-            # to make sure that the file name is unique
-            random_string = ''.join(random.choices(string.ascii_uppercase + string.digits, k=3))
-            file_name = self.rec_dir + '/' + str(recordings).zfill(5) + '_' + random_string + '.pkl'
-            with open(file_name, 'wb') as f:
-                pickle.dump(self.state, f)
-            time.sleep(0.1)
-            self.s3.upload_file(
-                file_name,
-                self.s3_bucket,
-                self.rec_dir + "/" + str(recordings).zfill(6) + ".pkl")
-            os.remove(file_name)
-                    
+            self.states.append(self.state)
             self.state = []
+            if len(self.states) % self.aws_save_every == 0:
+                self.save_states()
+                self.states = []
 
         return observation, rew, done, info
+    
+    def save_states(self):
+        recordings = 0
+        with open(self.inc_file, 'r') as f:
+            recordings = f.read()
+        if recordings != '':
+            recordings = int(recordings)
+            with open(self.inc_file, 'w') as f:
+                f.write(str(recordings + 1))
+
+        # Make a random string of 10 characters
+        # to make sure that the file name is unique
+        random_string = ''.join(random.choices(string.ascii_uppercase + string.digits, k=3))
+        file_name = self.rec_dir + '/' + str(recordings).zfill(5) + '_' + random_string + '.pt'
+        torch.save(self.states, file_name)
+        time.sleep(0.1)
+        self.s3.upload_file(
+            file_name,
+            self.s3_bucket,
+            self.rec_dir + "/" + str(recordings).zfill(6) + "_" + str(self.aws_save_every) + ".pt")
+        os.remove(file_name)
     
 
 class RecorderWrapperTensorOld(gym.Wrapper):
