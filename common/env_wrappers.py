@@ -684,6 +684,9 @@ def create_procgen_env(config, instance_seed, instance):
 
     env = WarpFrame(env, width=config.resolution[1], height=config.resolution[0], grayscale=config.grayscale)
 
+    # Print instance number for logging purposes
+    print(f'Instance {instance} created with seed {instance_seed}')
+
     # MY CHANGES -- Save everything as a tensor
     if os.environ["USE_TENSOR_S3"] == "True":
         env = RecorderWrapperTensorS3(env)
