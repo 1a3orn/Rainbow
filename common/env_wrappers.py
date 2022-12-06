@@ -429,7 +429,7 @@ class WarpFrame(gym.ObservationWrapper):
 class RecorderWrapperTensorS3(gym.Wrapper):
     """ Env wrapper that records the game as pickled tensors """
 
-    def __init__(self, env):
+    def __init__(self, env, instance):
         super().__init__(env)
         # Create AWS S3 client
         self.s3 = boto3.client(
@@ -440,6 +440,7 @@ class RecorderWrapperTensorS3(gym.Wrapper):
         self.s3_bucket = os.environ["AWS_S3_BUCKET"]
         self.rec_dir = os.environ["AWS_RECORDING_DIR"]
         self.aws_save_every = int(os.environ["AWS_SAVE_EVERY"])
+        self.instance = instance
 
         self.inc_file = self.rec_dir + '/recordings.txt'
         self.create_recorder_file()
@@ -489,14 +490,14 @@ class RecorderWrapperTensorS3(gym.Wrapper):
 
         # Make a random string of 10 characters
         # to make sure that the file name is unique
-        random_string = ''.join(random.choices(string.ascii_uppercase + string.digits, k=3))
-        file_name = self.rec_dir + '/' + str(recordings).zfill(5) + '_' + random_string + '.pt'
+        rand = ''.join(random.choices(string.ascii_uppercase + string.digits, k=3))
+        file_name = self.rec_dir + '/' + str(recordings).zfill(5) + '_' + rand + '.pt'
         torch.save(self.states, file_name)
         time.sleep(0.1)
         self.s3.upload_file(
             file_name,
             self.s3_bucket,
-            self.rec_dir + "/" + str(recordings).zfill(6) + "_" + str(self.aws_save_every) + ".pt")
+            self.rec_dir + "/" + str(recordings).zfill(6) + "_" + str(self.instance).zfill(2) + "_" + str(self.aws_save_every) + ".pt")
         os.remove(file_name)
     
 
@@ -689,7 +690,7 @@ def create_procgen_env(config, instance_seed, instance):
 
     # MY CHANGES -- Save everything as a tensor
     if os.environ["USE_TENSOR_S3"] == "True":
-        env = RecorderWrapperTensorS3(env)
+        env = RecorderWrapperTensorS3(env, instance)
 
     if instance == 0:
         env = RecorderWrapper(env, fps=BASE_FPS_PROCGEN // config.frame_skip, save_dir=config.save_dir, label='preproc', record_every=config.record_every)
