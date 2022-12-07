@@ -86,8 +86,8 @@ class TimeLimit(gym.Wrapper):
             # quickly step through the environment to get to a new episode.
             looping = True
             while looping:
-                _observation, _reward, _done, _info = self.env.step(ac)
-                if done:
+                _observation, _reward, _done, _info = self.env.step(1)
+                if _done:
                     looping = False
         return observation, reward, done, info
 
