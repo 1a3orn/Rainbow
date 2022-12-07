@@ -81,7 +81,7 @@ class TimeLimit(gym.Wrapper):
         if self._elapsed_steps >= self._max_episode_steps:
             done = True
             info['TimeLimit.truncated'] = True
-            print('Truncated episode due to time limit!')
+            # print('Truncated episode due to time limit!')
             # Procgen environments don't have a working reset method, so we have to
             # quickly step through the environment to get to a new episode.
             looping = True
