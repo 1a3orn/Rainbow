@@ -11,6 +11,7 @@ import boto3
 import string
 import random
 from functools import partial
+from multiprocessing import Process
 
 import cv2, imageio
 import gym, retro
@@ -494,11 +495,17 @@ class RecorderWrapperTensorS3(gym.Wrapper):
         file_name = self.rec_dir + '/' + str(recordings).zfill(5) + '_' + rand + '.pt'
         torch.save(self.states, file_name)
         time.sleep(0.1)
-        self.s3.upload_file(
-            file_name,
-            self.s3_bucket,
-            self.rec_dir + "/" + str(recordings).zfill(6) + "_" + str(self.instance).zfill(2) + "_" + str(self.aws_save_every) + ".pt")
-        os.remove(file_name)
+
+        def upload():
+            self.s3.upload_file(
+                file_name,
+                self.s3_bucket,
+                self.rec_dir + "/" + str(recordings).zfill(6) + "_" + str(self.instance).zfill(2) + "_" + str(self.aws_save_every) + ".pt")
+            os.remove(file_name)
+
+        process = Process(target=upload)
+        process.start()
+
     
 
 class RecorderWrapperTensorOld(gym.Wrapper):
@@ -670,6 +677,8 @@ def create_procgen_env(config, instance_seed, instance):
     procgen_args = {k[8:]: v for k, v in vars(config).items() if k.startswith('procgen_')}
     procgen_args['start_level'] += 300_000*instance
     env = gym.make(f'procgen:procgen-{config.env_name.lower()[8:]}-v0', **procgen_args)
+
+    env = TimeLimit(env, config.time_limit)
 
     if instance == 0:
         env = RecorderWrapper(env, fps=BASE_FPS_PROCGEN, save_dir=config.save_dir, label='emulator', record_every=config.record_every)
