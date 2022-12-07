@@ -479,7 +479,9 @@ class RecorderWrapperTensorS3(gym.Wrapper):
 
         # If the episode is done
         if done:
-            self.states.append(self.state)
+            # Save the states with 50% probability
+            if random.random() < 0.25:
+                self.states.append(self.state)
             self.state = []
             if len(self.states) % self.aws_save_every == 0:
                 self.save_states()
