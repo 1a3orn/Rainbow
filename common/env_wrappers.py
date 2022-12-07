@@ -82,6 +82,13 @@ class TimeLimit(gym.Wrapper):
             done = True
             info['TimeLimit.truncated'] = True
             print('Truncated episode due to time limit!')
+            # Procgen environments don't have a working reset method, so we have to
+            # quickly step through the environment to get to a new episode.
+            looping = True
+            while looping:
+                _observation, _reward, _done, _info = self.env.step(ac)
+                if done:
+                    looping = False
         return observation, reward, done, info
 
     def reset(self, **kwargs):
@@ -494,7 +501,7 @@ class RecorderWrapperTensorS3(gym.Wrapper):
         rand = ''.join(random.choices(string.ascii_uppercase + string.digits, k=3))
         file_name = self.rec_dir + '/' + str(recordings).zfill(5) + '_' + rand + '.pt'
         torch.save(self.states, file_name)
-        time.sleep(0.1)
+        time.sleep(0.01)
 
         def upload():
             self.s3.upload_file(
@@ -503,8 +510,7 @@ class RecorderWrapperTensorS3(gym.Wrapper):
                 self.rec_dir + "/" + str(recordings).zfill(6) + "_" + str(self.instance).zfill(2) + "_" + str(self.aws_save_every) + ".pt")
             os.remove(file_name)
 
-        process = Process(target=upload)
-        process.start()
+        upload()
 
     
 
