@@ -440,12 +440,7 @@ class RecorderWrapperTensorS3(gym.Wrapper):
     def __init__(self, env, instance):
         super().__init__(env)
         # Create AWS S3 client
-        self.s3 = boto3.client(
-                's3',
-                aws_access_key_id=os.environ["AWS_ACCESS_KEY_ID"],
-                aws_secret_access_key=os.environ["AWS_SECRET_ACCESS_KEY"])
-        
-        self.s3_bucket = os.environ["AWS_S3_BUCKET"]
+    
         self.rec_dir = os.environ["AWS_RECORDING_DIR"]
         self.aws_save_every = int(os.environ["AWS_SAVE_EVERY"])
         self.instance = instance
@@ -479,8 +474,8 @@ class RecorderWrapperTensorS3(gym.Wrapper):
 
         # If the episode is done
         if done:
-            # Save the states with 50% probability
-            if random.random() < 0.25:
+            # Save the states with 100% probability
+            if random.random() < 1:
                 self.states.append(self.state)
             self.state = []
             if len(self.states) % self.aws_save_every == 0:
@@ -505,14 +500,14 @@ class RecorderWrapperTensorS3(gym.Wrapper):
         torch.save(self.states, file_name)
         time.sleep(0.01)
 
-        def upload():
-            self.s3.upload_file(
-                file_name,
-                self.s3_bucket,
-                self.rec_dir + "/" + str(recordings).zfill(6) + "_" + str(self.instance).zfill(2) + "_" + str(self.aws_save_every) + ".pt")
-            os.remove(file_name)
+        # def upload():
+        #     self.s3.upload_file(
+        #         file_name,
+        #         self.s3_bucket,
+        #         self.rec_dir + "/" + str(recordings).zfill(6) + "_" + str(self.instance).zfill(2) + "_" + str(self.aws_save_every) + ".pt")
+        #     os.remove(file_name)
 
-        upload()
+        # upload()
 
     
 
