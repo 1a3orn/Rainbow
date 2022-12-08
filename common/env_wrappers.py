@@ -495,8 +495,7 @@ class RecorderWrapperTensorS3(gym.Wrapper):
 
         # Make a random string of 10 characters
         # to make sure that the file name is unique
-        rand = ''.join(random.choices(string.ascii_uppercase + string.digits, k=3))
-        file_name = self.rec_dir + '/' + str(recordings).zfill(5) + '_' + rand + '.pt'
+        file_name = self.rec_dir + '/' + str(recordings).zfill(5) + '_' + str(self.instance) + '.pt'
         torch.save(self.states, file_name)
         time.sleep(0.01)
 
