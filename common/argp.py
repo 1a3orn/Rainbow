@@ -22,8 +22,8 @@ def read_args():
                                      formatter_class=argparse.RawTextHelpFormatter)
 
     # training settings
-    parser.add_argument('--training_frames', type=int, default=5_000_000, help='train for n environment interactions ("game_frames" in the code)')
-    parser.add_argument('--record_every', type=int, default=60*50, help='wait at least x seconds between episode recordings (default is to use environment specific presets)')
+    parser.add_argument('--training_frames', type=int, default=4_000_000, help='train for n environment interactions ("game_frames" in the code)')
+    parser.add_argument('--record_every', type=int, default=60*10, help='wait at least x seconds between episode recordings (default is to use environment specific presets)')
     parser.add_argument('--seed', type=int, default=0, help='seed for pytorch, numpy, environments, random')
     parser.add_argument('--use_wandb', type=parse_bool, default=True, help='whether use "weights & biases" for tracking metrics, video recordings and model checkpoints')
     parser.add_argument('--use_amp', type=parse_bool, default=True, help='whether to enable automatic mixed precision for the forward passes')
@@ -53,7 +53,7 @@ def read_args():
     parser.add_argument('--resolution', type=int, default=None, help='environment resolution (default is to use environment specific presets)')
 
     # dqn settings
-    parser.add_argument('--buffer_size', type=int, default=int(2 ** 20), help='capacity of experience replay buffer (must be a power of two)')
+    parser.add_argument('--buffer_size', type=int, default=int(2 ** 18), help='capacity of experience replay buffer (must be a power of two)')
     parser.add_argument('--burnin', type=int, default=50_000, help='how many transitions should be in the buffer before start of training')
     parser.add_argument('--gamma', type=float, default=0.99, help='reward discount factor')
     parser.add_argument('--sync_dqn_target_every', type=int, default=32_000, help='sync Q target net every n frames')
