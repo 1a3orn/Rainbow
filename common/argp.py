@@ -36,7 +36,7 @@ def read_args():
                              'some gym envs:   MsPacman, Phoenix, Breakout, Qbert, Amidar, SpaceInvaders, Assault\n'
                              'some retro envs: SuperMarioWorld-Snes, MortalKombat3-Genesis, SpaceMegaforce-Snes, SmashTV-Nes, AirBuster-Genesis, NewZealandStory-Genesis, Paperboy-Nes\n'
                              'progcen envs:    bigfish, bossfight, caveflyer, chaser, climber, coinrun, dodgeball, fruitbot, heist, jumper, leaper, maze, miner, ninja, plunder, starpilot')
-    parser.add_argument('--procgen_distribution_mode', type=str, default='hard',
+    parser.add_argument('--procgen_distribution_mode', type=str, default='easy',
                         help='what variant of the procgen levels to use, the options are "easy", "hard", "extreme", "memory", "exploration". All'
                              ' games support "easy" and "hard", while other options are game-specific. The default is "hard". Switching to "easy'
                              '" will reduce the number of timesteps required to solve each game and is useful for testing or when working with l'
